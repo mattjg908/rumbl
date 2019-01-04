@@ -3,7 +3,7 @@ defmodule Rumbl.Accounts do
   The Accounts context.
   """
 
-  alias Rumbl.Accounts.User 
+  alias Rumbl.Accounts.User
 
   def list_users do
     [
