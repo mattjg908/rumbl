@@ -1,6 +1,13 @@
 defmodule RumblWeb.VideoControllerTest do
   use RumblWeb.ConnCase
 
+  alias Rumbl.Multimedia
+
+  @create_attrs %{url: "http://youtu.be", title: "vid", description: "a vid"}
+  @invalid_attrs %{title: "invalid"}
+
+  defp video_count, do: Enum.count(Multimedia.list_videos())
+
   describe "with a logged-in user" do
 
     setup %{conn: conn, login_as: username} do
@@ -21,13 +28,6 @@ defmodule RumblWeb.VideoControllerTest do
       refute String.contains?(conn.resp_body, other_video.title)
     end
 
-    alias Rumbl.Multimedia
-
-    @create_attrs %{url: "http://youtu.be", title: "vid", description: "a vid"}
-    @invalid_attrs %{title: "invalid"}
-
-    defp video_count, do: Enum.count(Multimedia.list_videos())
-
     @tag login_as: "max"
     test "creates user video and redirects", %{conn: conn, user: user} do
       create_conn = post conn, Routes.video_path(conn, :create), video: @create_attrs
@@ -47,6 +47,26 @@ defmodule RumblWeb.VideoControllerTest do
       conn = post conn, Routes.video_path(conn, :create), video: @invalid_attrs
       assert html_response(conn, 200) =~ "check the errors"
       assert video_count() == count_before
+    end
+  end
+
+  test "authorizes actions against access by other users", %{conn: conn} do
+    owner = user_fixture(username: "owner")
+    video = video_fixture(owner, @create_attrs)
+    non_owner = user_fixture(username: "sneaky")
+    conn = assign(conn, :current_user, non_owner)
+
+    assert_error_sent :not_found, fn ->
+      get(conn, Routes.video_path(conn, :show, video))
+    end
+    assert_error_sent :not_found, fn ->
+      get(conn, Routes.video_path(conn, :edit, video))
+    end
+    assert_error_sent :not_found, fn ->
+      put(conn, Routes.video_path(conn, :update, video, video: @create_attrs))
+    end
+    assert_error_sent :not_found, fn ->
+      delete(conn, Routes.video_path(conn, :delete, video))
     end
   end
 
