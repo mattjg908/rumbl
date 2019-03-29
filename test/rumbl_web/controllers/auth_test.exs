@@ -45,4 +45,39 @@ defmodule RumblWeb.AuthTest do
     next_conn = get(logout_conn, "/")
     refute get_session(next_conn, :user_id)
   end
+
+  test "call places user from session into assigns", %{conn: conn} do
+    user = user_fixture()
+    conn =
+      conn
+      |> put_session(:user_id, user.id)
+      |> Auth.call(Auth.init([]))
+
+    assert conn.assigns.current_user.id == user.id
+  end
+
+  test "call with no session sets current_user assign to nil", %{conn: conn} do
+    conn = Auth.call(conn, Auth.init([]))
+    assert conn.assigns.current_user == nil
+  end
+
+  test "login with a valid username and pass", %{conn: conn} do
+    user = user_fixture(username: "me", email: "me@test", password: "secret")
+
+    {:ok, conn} =
+      Auth.login_by_email_and_pass(conn, "me@test", "secret")
+
+    assert conn.assigns.current_user.id == user.id
+  end
+
+  test "login with a not found user", %{conn: conn} do
+    assert {:error, :not_found, _conn} =
+      Auth.login_by_email_and_pass(conn, "me@test", "secret")
+  end
+
+  test "login with password mismatch", %{conn: conn} do
+    _ = user_fixture(username: "me", email: "me@test", password: "secret")
+    assert {:error, :unauthorized, _conn} =
+      Auth.login_by_email_and_pass(conn, "me@test", "wrong")
+  end
 end
