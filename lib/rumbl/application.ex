@@ -6,12 +6,14 @@ defmodule Rumbl.Application do
   use Application
 
   def start(_type, _args) do
+    # List all child processes to be supervised
     children = [
       Rumbl.Repo,
       RumblWeb.Endpoint,
-      {Rumbl.Counter, 5}, # new counter worker
     ]
 
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Rumbl.Supervisor]
     Supervisor.start_link(children, opts)
   end
